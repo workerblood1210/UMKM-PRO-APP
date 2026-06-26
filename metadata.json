@@ -1,0 +1,8 @@
+{
+  "name": "Remix: UMKM PRO",
+  "description": "Aplikasi dashboard UMKM modern dengan estetika liquidglassmorphism khas iOS 27.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
