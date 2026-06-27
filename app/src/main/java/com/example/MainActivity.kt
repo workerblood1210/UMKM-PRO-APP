@@ -39,6 +39,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.RoomService
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -79,13 +80,18 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-enum class AppState {
-    Splash, Dashboard, AddProduct, AddBahanBaku
+sealed class AppState {
+    object Splash : AppState()
+    object Dashboard : AppState()
+    data class AddProduct(val productToEdit: com.example.data.Product? = null) : AppState()
+    object AddBahanBaku : AppState()
+    data class DetailProduct(val product: com.example.data.Product) : AppState()
+    data class Kalkulasi(val products: List<com.example.data.Product>) : AppState()
 }
 
 @Composable
 fun AppNavigator() {
-    var currentState by remember { mutableStateOf(AppState.Splash) }
+    var currentState by remember { mutableStateOf<AppState>(AppState.Splash) }
     var successMessage by remember { mutableStateOf<String?>(null) }
     
     val context = LocalContext.current
@@ -100,23 +106,38 @@ fun AppNavigator() {
             label = "AppTransition"
         ) { state ->
             when (state) {
-                AppState.Splash -> SplashScreen {
+                is AppState.Splash -> SplashScreen {
                     currentState = AppState.Dashboard
                 }
-                AppState.Dashboard -> DashboardScreen(
+                is AppState.Dashboard -> DashboardScreen(
                     viewModel = viewModel,
-                    onNavigateToAddProduct = { currentState = AppState.AddProduct },
-                    onNavigateToAddBahanBaku = { currentState = AppState.AddBahanBaku }
+                    onNavigateToAddProduct = { currentState = AppState.AddProduct() },
+                    onNavigateToAddBahanBaku = { currentState = AppState.AddBahanBaku },
+                    onNavigateToDetail = { currentState = AppState.DetailProduct(it) },
+                    onNavigateToKalkulasi = { currentState = AppState.Kalkulasi(it) }
                 )
-                AppState.AddProduct -> AddProductScreen(
+                is AppState.AddProduct -> AddProductScreen(
                     viewModel = viewModel,
+                    productToEdit = state.productToEdit,
                     onBack = { currentState = AppState.Dashboard },
                     onSuccess = {
                         successMessage = "data tersimpan"
                         currentState = AppState.Dashboard
                     }
                 )
-                AppState.AddBahanBaku -> BahanBakuDashboardScreen(
+                is AppState.AddBahanBaku -> BahanBakuDashboardScreen(
+                    viewModel = viewModel,
+                    onBack = { currentState = AppState.Dashboard }
+                )
+                is AppState.DetailProduct -> DetailProductScreen(
+                    product = state.product,
+                    viewModel = viewModel,
+                    onBack = { currentState = AppState.Dashboard },
+                    onEditProduct = { currentState = AppState.AddProduct(it) },
+                    onEditBahanBaku = { currentState = AppState.AddBahanBaku }
+                )
+                is AppState.Kalkulasi -> KalkulasiScreen(
+                    products = state.products,
                     viewModel = viewModel,
                     onBack = { currentState = AppState.Dashboard }
                 )
@@ -763,8 +784,16 @@ fun SplashScreen(onAnimationFinished: () -> Unit) {
 }
 
 @Composable
-fun DashboardScreen(viewModel: ProductViewModel, onNavigateToAddProduct: () -> Unit, onNavigateToAddBahanBaku: () -> Unit) {
+fun DashboardScreen(
+    viewModel: ProductViewModel, 
+    onNavigateToAddProduct: () -> Unit, 
+    onNavigateToAddBahanBaku: () -> Unit,
+    onNavigateToDetail: (com.example.data.Product) -> Unit,
+    onNavigateToKalkulasi: (List<com.example.data.Product>) -> Unit
+) {
     val products by viewModel.uiState.collectAsStateWithLifecycle()
+    
+    var kalkulasiCart by remember { mutableStateOf(setOf<com.example.data.Product>()) }
     
     val infiniteTransition = rememberInfiniteTransition(label = "DashboardPulse")
     val cardAlpha by infiniteTransition.animateFloat(
@@ -921,11 +950,41 @@ fun DashboardScreen(viewModel: ProductViewModel, onNavigateToAddProduct: () -> U
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         products.forEach { product ->
-                            ProductCard(product)
+                            ProductCard(
+                                product = product,
+                                isInCart = kalkulasiCart.contains(product),
+                                onDetailClick = { onNavigateToDetail(product) },
+                                onKalkulasiToggle = { 
+                                    if (kalkulasiCart.contains(product)) {
+                                        kalkulasiCart = kalkulasiCart - product
+                                    } else {
+                                        kalkulasiCart = kalkulasiCart + product
+                                    }
+                                }
+                            )
                         }
                     }
                 }
             }
+        }
+
+        // Floating Kalkulasi Button
+        androidx.compose.animation.AnimatedVisibility(
+            visible = kalkulasiCart.isNotEmpty(),
+            enter = androidx.compose.animation.slideInVertically(initialOffsetY = { it }) + androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.slideOutVertically(targetOffsetY = { it }) + androidx.compose.animation.fadeOut(),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 32.dp)
+                .safeDrawingPadding()
+        ) {
+            ExtendedFloatingActionButton(
+                onClick = { onNavigateToKalkulasi(kalkulasiCart.toList()) },
+                containerColor = Color(0xFF00F0FF),
+                contentColor = Color(0xFF1E293B),
+                icon = { Icon(Icons.Default.RoomService, contentDescription = "Kalkulasi") },
+                text = { Text("KALKULASI (${kalkulasiCart.size})", fontWeight = FontWeight.Bold) }
+            )
         }
 
         GlassmorphicExpandableFab(
@@ -939,8 +998,14 @@ fun DashboardScreen(viewModel: ProductViewModel, onNavigateToAddProduct: () -> U
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-fun ProductCard(product: Product) {
+fun ProductCard(
+    product: com.example.data.Product,
+    isInCart: Boolean,
+    onDetailClick: () -> Unit,
+    onKalkulasiToggle: () -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -965,87 +1030,164 @@ fun ProductCard(product: Product) {
             )
             .padding(16.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Column {
+            // Main image view
             Box(
                 modifier = Modifier
-                    .size(60.dp)
+                    .fillMaxWidth()
+                    .aspectRatio(16f/9f)
                     .background(Color(0x1AFFFFFF), RoundedCornerShape(12.dp))
                     .border(1.dp, Color(0x3300F0FF), RoundedCornerShape(12.dp))
                     .clip(RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 if (product.imageUris.isNotEmpty()) {
-                    val firstImageUri = product.imageUris.split(",").firstOrNull()
-                    AsyncImage(
-                        model = firstImageUri,
-                        contentDescription = product.name,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
+                    val images = product.imageUris.split(",")
+                    if (images.size > 1) {
+                        val pagerState = androidx.compose.foundation.pager.rememberPagerState(pageCount = { images.size })
+                        androidx.compose.foundation.pager.HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier.fillMaxSize()
+                        ) { page ->
+                            AsyncImage(
+                                model = images[page],
+                                contentDescription = product.name,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                        // Pager indicators could be added here
+                        Row(
+                            Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = 8.dp),
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            repeat(images.size) { iteration ->
+                                val color = if (pagerState.currentPage == iteration) Color.White else Color.White.copy(alpha = 0.5f)
+                                Box(
+                                    modifier = Modifier
+                                        .padding(2.dp)
+                                        .clip(CircleShape)
+                                        .background(color)
+                                        .size(6.dp)
+                                )
+                            }
+                        }
+                    } else {
+                        AsyncImage(
+                            model = images[0],
+                            contentDescription = product.name,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                 } else {
                     Icon(
                         imageVector = Icons.Default.ShoppingCart,
                         contentDescription = null,
                         tint = Color(0xFF00F0FF),
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(48.dp)
+                    )
+                }
+                
+                // Restaurant Cloche Icon for Kalkulasi
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .size(36.dp)
+                        .background(if (isInCart) Color(0xFF00F0FF) else Color(0xB31E293B), CircleShape)
+                        .border(1.dp, if (isInCart) Color.Transparent else Color(0x6600F0FF), CircleShape)
+                        .clickable { onKalkulasiToggle() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.RoomService,
+                        contentDescription = "Kalkulasi",
+                        tint = if (isInCart) Color(0xFF1E293B) else Color(0xFF00F0FF),
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Product Info
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = product.name,
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .background(Color(0x3300F0FF), RoundedCornerShape(6.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = product.category,
+                                color = Color(0xFF00F0FF),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .background(Color(0x3394A3B8), RoundedCornerShape(6.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = product.type,
+                                color = Color(0xFF94A3B8),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                    
+                    if (product.type == "Paket") {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = product.packageName,
+                            color = Color(0xCCFFFFFF),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
 
-            Column(
-                modifier = Modifier.weight(1f)
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Cek detail produk
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onDetailClick() }
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = product.name,
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
+                    text = "cek detail produk",
+                    color = Color(0xFF00F0FF),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .background(Color(0x3300F0FF), RoundedCornerShape(6.dp))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = product.category,
-                            color = Color(0xFF00F0FF),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                    Box(
-                        modifier = Modifier
-                            .background(Color(0x3394A3B8), RoundedCornerShape(6.dp))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = product.type,
-                            color = Color(0xFF94A3B8),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
-                
-                if (product.type == "Paket") {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = product.packageName,
-                        color = Color(0xCCFFFFFF),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
             }
         }
     }
@@ -1200,23 +1342,28 @@ fun FabChildButton(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddProductScreen(viewModel: ProductViewModel, onBack: () -> Unit, onSuccess: () -> Unit) {
+fun AddProductScreen(
+    viewModel: ProductViewModel, 
+    productToEdit: com.example.data.Product? = null,
+    onBack: () -> Unit, 
+    onSuccess: () -> Unit
+) {
     val products by viewModel.uiState.collectAsStateWithLifecycle()
     val bahanBakuList by viewModel.bahanBakuState.collectAsStateWithLifecycle()
-    var selectedBahanBakuIds by remember { mutableStateOf(setOf<Int>()) }
+    var selectedBahanBakuIds by remember { mutableStateOf(productToEdit?.bahanBakuIds?.split(",")?.filter { it.isNotBlank() }?.map { it.toInt() }?.toSet() ?: setOf<Int>()) }
     var showSelectionSheet by remember { mutableStateOf(false) }
 
-    var productName by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf("") }
+    var productName by remember { mutableStateOf(productToEdit?.name ?: "") }
+    var category by remember { mutableStateOf(productToEdit?.category ?: "") }
     
     var showDuplicateAlert by remember { mutableStateOf(false) }
     var showExitAlert by remember { mutableStateOf(false) }
-    var productType by remember { mutableStateOf("Satuan") } // Satuan or Paket
-    var packageName by remember { mutableStateOf("") }
-    var packageDesc by remember { mutableStateOf("") }
+    var productType by remember { mutableStateOf(productToEdit?.type ?: "Satuan") } // Satuan or Paket
+    var packageName by remember { mutableStateOf(productToEdit?.packageName ?: "") }
+    var packageDesc by remember { mutableStateOf(productToEdit?.packageDesc ?: "") }
     val productTypes = listOf("Satuan", "Paket")
     var typeDropdownExpanded by remember { mutableStateOf(false) }
-    var imageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    var imageUris by remember { mutableStateOf<List<Uri>>(productToEdit?.imageUris?.split(",")?.filter { it.isNotBlank() }?.map { Uri.parse(it) } ?: emptyList()) }
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia(),
         onResult = { uris ->
@@ -1250,7 +1397,19 @@ fun AddProductScreen(viewModel: ProductViewModel, onBack: () -> Unit, onSuccess:
                             shape = RoundedCornerShape(16.dp)
                         )
                         .clickable { 
-                            if (productName.isNotBlank() || category.isNotBlank() || selectedBahanBakuIds.isNotEmpty() || imageUris.isNotEmpty()) {
+                            val hasChanged = if (productToEdit != null) {
+                                productName != productToEdit.name ||
+                                category != productToEdit.category ||
+                                productType != productToEdit.type ||
+                                packageName != productToEdit.packageName ||
+                                packageDesc != productToEdit.packageDesc ||
+                                selectedBahanBakuIds.joinToString(",") != productToEdit.bahanBakuIds ||
+                                imageUris.joinToString(",") { it.toString() } != productToEdit.imageUris
+                            } else {
+                                productName.isNotBlank() || category.isNotBlank() || selectedBahanBakuIds.isNotEmpty() || imageUris.isNotEmpty() || packageName.isNotBlank() || packageDesc.isNotBlank()
+                            }
+                            
+                            if (hasChanged) {
                                 showExitAlert = true
                             } else {
                                 onBack()
@@ -1269,7 +1428,7 @@ fun AddProductScreen(viewModel: ProductViewModel, onBack: () -> Unit, onSuccess:
                 Spacer(modifier = Modifier.width(16.dp))
 
                 Text(
-                    text = "Tambah Produk",
+                    text = if (productToEdit != null) "Edit Produk" else "Tambah Produk",
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
@@ -1527,6 +1686,8 @@ fun AddProductScreen(viewModel: ProductViewModel, onBack: () -> Unit, onSuccess:
                         if (productName.isNotBlank()) {
                             // Duplicate check
                             val isDuplicate = products.any { 
+                                if (productToEdit != null && it.id == productToEdit.id) return@any false
+                                
                                 val sameBasic = it.name.trim().equals(productName.trim(), ignoreCase = true) && 
                                                it.category.trim().equals(category.trim(), ignoreCase = true) &&
                                                it.type == productType
@@ -1543,6 +1704,7 @@ fun AddProductScreen(viewModel: ProductViewModel, onBack: () -> Unit, onSuccess:
                             } else {
                                 viewModel.addProduct(
                                     Product(
+                                        id = productToEdit?.id ?: 0,
                                         name = productName.trim(),
                                         category = category.trim(),
                                         type = productType,
@@ -1828,11 +1990,20 @@ fun AddBahanBakuDialog(
     
     var showConfirmDialog by remember { mutableStateOf(false) }
     var showDuplicateAlert by remember { mutableStateOf(false) }
+    var showExitAlert by remember { mutableStateOf(false) }
     
     val units = listOf("Kg", "Gr", "Ltr", "ML")
     var unitDropdownExpanded by remember { mutableStateOf(false) }
 
-    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+    val handleDismiss = {
+        if (nama.isNotBlank() || kategori.isNotBlank() || harga.isNotBlank() || jumlah.isNotBlank()) {
+            showExitAlert = true
+        } else {
+            onDismiss()
+        }
+    }
+
+    androidx.compose.ui.window.Dialog(onDismissRequest = handleDismiss) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1962,7 +2133,7 @@ fun AddBahanBakuDialog(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TextButton(onClick = onDismiss) {
+                    TextButton(onClick = handleDismiss) {
                         Text("Batal", color = Color(0xFF94A3B8))
                     }
                     Spacer(modifier = Modifier.width(8.dp))
@@ -1971,8 +2142,10 @@ fun AddBahanBakuDialog(
                             if (nama.isNotBlank() && harga.isNotBlank() && jumlah.isNotBlank()) {
                                 // Duplicate check
                                 val isDuplicate = bahanBakuList.any { 
-                                    it.name.equals(nama.trim(), ignoreCase = true) && 
-                                    it.category.equals(kategori.trim(), ignoreCase = true) 
+                                    it.name.trim() == nama.trim() && 
+                                    it.category.trim() == kategori.trim() &&
+                                    it.unit == satuan &&
+                                    it.amount == (jumlah.toDoubleOrNull() ?: 0.0)
                                 }
                                 
                                 if (isDuplicate) {
@@ -1995,6 +2168,16 @@ fun AddBahanBakuDialog(
         
         if (showDuplicateAlert) {
             DuplicateAlertDialog(onDismiss = { showDuplicateAlert = false })
+        }
+
+        if (showExitAlert) {
+            ExitConfirmationDialog(
+                onConfirm = { 
+                    showExitAlert = false
+                    onDismiss()
+                },
+                onDismiss = { showExitAlert = false }
+            )
         }
         
         if (showConfirmDialog) {
@@ -2045,11 +2228,20 @@ fun EditBahanBakuDialog(
     
     var showConfirmDialog by remember { mutableStateOf(false) }
     var showDuplicateAlert by remember { mutableStateOf(false) }
+    var showExitAlert by remember { mutableStateOf(false) }
     
     val units = listOf("Kg", "Gr", "Ltr", "ML")
     var unitDropdownExpanded by remember { mutableStateOf(false) }
 
-    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+    val handleDismiss = {
+        if (nama != bahanBaku.name || kategori != bahanBaku.category || harga != bahanBaku.price.toLong().toString() || satuan != bahanBaku.unit || jumlah != bahanBaku.amount.toString()) {
+            showExitAlert = true
+        } else {
+            onDismiss()
+        }
+    }
+
+    androidx.compose.ui.window.Dialog(onDismissRequest = handleDismiss) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -2179,7 +2371,7 @@ fun EditBahanBakuDialog(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TextButton(onClick = onDismiss) {
+                    TextButton(onClick = handleDismiss) {
                         Text("Batal", color = Color(0xFF94A3B8))
                     }
                     Spacer(modifier = Modifier.width(8.dp))
@@ -2189,8 +2381,10 @@ fun EditBahanBakuDialog(
                                 // Duplicate check (excluding current item)
                                 val isDuplicate = bahanBakuList.any { 
                                     it.id != bahanBaku.id &&
-                                    it.name.equals(nama.trim(), ignoreCase = true) && 
-                                    it.category.equals(kategori.trim(), ignoreCase = true) 
+                                    it.name.trim() == nama.trim() && 
+                                    it.category.trim() == kategori.trim() &&
+                                    it.unit == satuan &&
+                                    it.amount == (jumlah.toDoubleOrNull() ?: 0.0)
                                 }
                                 
                                 if (isDuplicate) {
@@ -2215,6 +2409,16 @@ fun EditBahanBakuDialog(
             DuplicateAlertDialog(onDismiss = { showDuplicateAlert = false })
         }
         
+        if (showExitAlert) {
+            ExitConfirmationDialog(
+                onConfirm = { 
+                    showExitAlert = false
+                    onDismiss()
+                },
+                onDismiss = { showExitAlert = false }
+            )
+        }
+
         if (showConfirmDialog) {
             AlertDialog(
                 onDismissRequest = { showConfirmDialog = false },
