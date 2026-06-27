@@ -819,67 +819,50 @@ fun DashboardScreen(
                     .fillMaxWidth()
                     .padding(vertical = 16.dp)
                     .background(
-                        color = Color(0x0CFFFFFF),
-                        shape = RoundedCornerShape(20.dp)
+                        color = Color(0x1AFFFFFF),
+                        shape = RoundedCornerShape(24.dp)
                     )
                     .border(
                         width = 1.dp,
-                        brush = Brush.verticalGradient(
-                            listOf(Color(0x20FFFFFF), Color.Transparent)
+                        brush = Brush.linearGradient(
+                            listOf(Color(0x40FFFFFF), Color(0x10FFFFFF))
                         ),
-                        shape = RoundedCornerShape(20.dp)
+                        shape = RoundedCornerShape(24.dp)
                     )
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
+                Image(
+                    painter = androidx.compose.ui.res.painterResource(id = R.drawable.img_logo),
+                    contentDescription = "Logo Toko",
+                    contentScale = ContentScale.Crop,
                     modifier = Modifier
-                        .size(36.dp)
-                        .background(
-                            Brush.radialGradient(
-                                listOf(Color(0x2600F0FF), Color.Transparent)
-                            ),
-                            shape = RoundedCornerShape(18.dp)
-                        )
-                        .border(
-                            1.dp, Color(0x26FFFFFF), RoundedCornerShape(18.dp)
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(12.dp)
-                            .background(Color(0xFF00F0FF), RoundedCornerShape(6.dp))
-                    )
-                }
-
-                Text(
-                    text = "UMKM PRO",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 2.sp,
-                    color = Color.White,
-                    modifier = Modifier.testTag("dashboard_title")
+                        .size(52.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .border(1.dp, Color(0x40FFFFFF), RoundedCornerShape(16.dp))
                 )
-
-                Box(
-                    modifier = Modifier
-                        .background(
-                            Color(0x1C00F0FF),
-                            RoundedCornerShape(12.dp)
-                        )
-                        .border(
-                            1.dp, Color(0x2E00F0FF), RoundedCornerShape(12.dp)
-                        )
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                
+                Spacer(modifier = Modifier.width(16.dp))
+                
+                Column(
+                    modifier = Modifier.weight(1f)
                 ) {
                     Text(
-                        text = "ACTIVE",
-                        fontSize = 10.sp,
+                        text = "NAMA TOKO",
+                        fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF00F0FF),
+                        color = Color.White,
                         letterSpacing = 1.sp
+                    )
+                    
+                    val currentDate = remember {
+                        java.text.SimpleDateFormat("EEEE, dd MMMM yyyy", java.util.Locale("id", "ID")).format(java.util.Date())
+                    }
+                    
+                    Text(
+                        text = currentDate,
+                        fontSize = 13.sp,
+                        color = Color(0xFF94A3B8)
                     )
                 }
             }
@@ -1137,47 +1120,48 @@ fun ProductCard(
                     Text(
                         text = product.name,
                         color = Color.White,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .background(Color(0x3300F0FF), RoundedCornerShape(6.dp))
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = product.category,
-                                color = Color(0xFF00F0FF),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                        Box(
-                            modifier = Modifier
-                                .background(Color(0x3394A3B8), RoundedCornerShape(6.dp))
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = product.type,
-                                color = Color(0xFF94A3B8),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
+                        Text(
+                            text = product.category,
+                            color = Color(0xFF00F0FF),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = "|",
+                            color = Color(0xFF64748B),
+                            fontSize = 13.sp
+                        )
+                        Text(
+                            text = product.type,
+                            color = Color(0xFF94A3B8),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
                     }
                     
                     if (product.type == "Paket") {
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = product.packageName,
                             color = Color(0xCCFFFFFF),
                             fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                         )
                     }
                 }

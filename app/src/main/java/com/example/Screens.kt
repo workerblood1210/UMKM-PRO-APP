@@ -176,12 +176,57 @@ fun DetailProductScreen(
                         modifier = Modifier.padding(20.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        DetailItem("Nama Produk", product.name)
-                        DetailItem("Kategori", product.category)
-                        DetailItem("Jenis Produk", product.type)
+                        Column {
+                            Text(
+                                text = product.name,
+                                color = Color.White,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = product.category,
+                                    color = Color(0xFF00F0FF),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = "|",
+                                    color = Color(0xFF64748B),
+                                    fontSize = 13.sp
+                                )
+                                Text(
+                                    text = product.type,
+                                    color = Color(0xFF94A3B8),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                )
+                            }
+                            
+                            if (product.type == "Paket") {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = product.packageName,
+                                    color = Color(0xCCFFFFFF),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                )
+                            }
+                        }
                         
                         if (product.type == "Paket") {
-                            DetailItem("Nama Paket", product.packageName)
                             DetailItem("Deskripsi Paket", product.packageDesc)
                         }
 
@@ -302,7 +347,9 @@ fun KalkulasiScreen(
                                 text = "Produk: ${product.name}",
                                 color = Color(0xFF00F0FF),
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp
+                                fontSize = 16.sp,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
                             Spacer(modifier = Modifier.height(12.dp))
 
