@@ -10,6 +10,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -185,6 +186,35 @@ fun SuccessNotification(message: String, onDismiss: () -> Unit) {
 }
 
 @Composable
+fun ExitConfirmationDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Konfirmasi Keluar", color = Color.White, fontWeight = FontWeight.Bold)
+        },
+        text = {
+            Text(
+                "Anda yakin ingin keluar tanpa menyimpan data?",
+                color = Color(0xFF94A3B8),
+                fontSize = 15.sp
+            )
+        },
+        containerColor = Color(0xFF1E293B),
+        shape = RoundedCornerShape(28.dp),
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("Ya, Keluar", color = Color(0xFFF44336), fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Batal", color = Color.White)
+            }
+        }
+    )
+}
+
+@Composable
 fun DuplicateAlertDialog(onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -225,7 +255,7 @@ fun BahanBakuSlideMenu(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.6f))
+            .background(Color.Black.copy(alpha = 0.5f))
             .clickable { onDismiss() }
     ) {
         androidx.compose.animation.AnimatedVisibility(
@@ -237,79 +267,89 @@ fun BahanBakuSlideMenu(
             Surface(
                 modifier = Modifier
                     .fillMaxHeight()
-                    .fillMaxWidth(0.85f)
+                    .fillMaxWidth(0.92f)
                     .clickable(enabled = false) {},
                 color = Color(0xFF0B1528),
                 tonalElevation = 8.dp,
-                shadowElevation = 16.dp
+                shadowElevation = 16.dp,
+                border = BorderStroke(1.dp, Color(0x1AFFFFFF))
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(24.dp)
                 ) {
+                    // Header of Slide Menu
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(Color(0x0CFFFFFF), RoundedCornerShape(12.dp))
+                                .border(1.dp, Color(0x26FFFFFF), RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { onDismiss() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
                         Column {
                             Text(
-                                "Pilih Bahan Baku",
+                                "Daftar Bahan Baku",
                                 color = Color.White,
-                                fontSize = 20.sp,
+                                fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                "Tentukan komposisi produk",
+                                "Pilih item untuk komposisi produk",
                                 color = Color(0xFF94A3B8),
-                                fontSize = 13.sp
+                                fontSize = 12.sp
                             )
-                        }
-                        IconButton(onClick = onDismiss) {
-                            Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    HorizontalDivider(color = Color(0x1AFFFFFF), thickness = 1.dp)
 
                     if (bahanBakuList.isEmpty()) {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Text("Belum ada data bahan baku", color = Color(0xFF94A3B8))
                         }
                     } else {
-                        androidx.compose.foundation.lazy.LazyColumn(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                            columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(1),
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(horizontal = 24.dp),
+                            contentPadding = PaddingValues(vertical = 12.dp)
                         ) {
                             items(bahanBakuList.size) { index ->
                                 val item = bahanBakuList[index]
                                 val isSelected = selectedIds.contains(item.id)
                                 
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(
-                                            color = if (isSelected) Color(0x1A00F0FF) else Color(0x0CFFFFFF),
-                                            shape = RoundedCornerShape(16.dp)
-                                        )
-                                        .border(
-                                            width = 1.dp,
-                                            color = if (isSelected) Color(0xFF00F0FF) else Color(0x26FFFFFF),
-                                            shape = RoundedCornerShape(16.dp)
-                                        )
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .clickable {
-                                            val newSelection = if (isSelected) {
-                                                selectedIds - item.id
-                                            } else {
-                                                selectedIds + item.id
-                                            }
-                                            onSelectionChanged(newSelection)
-                                        }
-                                        .padding(16.dp)
-                                ) {
+                                Column {
                                     Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                val newSelection = if (isSelected) {
+                                                    selectedIds - item.id
+                                                } else {
+                                                    selectedIds + item.id
+                                                }
+                                                onSelectionChanged(newSelection)
+                                            }
+                                            .padding(vertical = 16.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                                     ) {
@@ -343,22 +383,29 @@ fun BahanBakuSlideMenu(
                                             )
                                         }
                                     }
+                                    if (index < bahanBakuList.size - 1) {
+                                        HorizontalDivider(color = Color(0x0DFFFFFF), thickness = 1.dp)
+                                    }
                                 }
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    Button(
-                        onClick = onDismiss,
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(56.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00F0FF)),
-                        shape = RoundedCornerShape(16.dp)
+                            .padding(24.dp)
                     ) {
-                        Text("Selesai", color = Color(0xFF020E26), fontWeight = FontWeight.Bold)
+                        Button(
+                            onClick = onDismiss,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00F0FF)),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Text("Simpan Komposisi", color = Color(0xFF020E26), fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
@@ -1157,11 +1204,13 @@ fun AddProductScreen(viewModel: ProductViewModel, onBack: () -> Unit, onSuccess:
     val products by viewModel.uiState.collectAsStateWithLifecycle()
     val bahanBakuList by viewModel.bahanBakuState.collectAsStateWithLifecycle()
     var selectedBahanBakuIds by remember { mutableStateOf(setOf<Int>()) }
+    var showSelectionSheet by remember { mutableStateOf(false) }
 
     var productName by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("") }
     
     var showDuplicateAlert by remember { mutableStateOf(false) }
+    var showExitAlert by remember { mutableStateOf(false) }
     var productType by remember { mutableStateOf("Satuan") } // Satuan or Paket
     var packageName by remember { mutableStateOf("") }
     var packageDesc by remember { mutableStateOf("") }
@@ -1181,7 +1230,7 @@ fun AddProductScreen(viewModel: ProductViewModel, onBack: () -> Unit, onSuccess:
                 .fillMaxSize()
                 .safeDrawingPadding()
         ) {
-            // Header
+            // Header (Remains visible)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1200,7 +1249,13 @@ fun AddProductScreen(viewModel: ProductViewModel, onBack: () -> Unit, onSuccess:
                             color = Color(0x26FFFFFF),
                             shape = RoundedCornerShape(16.dp)
                         )
-                        .clickable { onBack() },
+                        .clickable { 
+                            if (productName.isNotBlank() || category.isNotBlank() || selectedBahanBakuIds.isNotEmpty() || imageUris.isNotEmpty()) {
+                                showExitAlert = true
+                            } else {
+                                onBack()
+                            }
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -1222,14 +1277,15 @@ fun AddProductScreen(viewModel: ProductViewModel, onBack: () -> Unit, onSuccess:
                 )
             }
 
-            // Form Content
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 24.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
-            ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                // Form Content
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 24.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
                 Spacer(modifier = Modifier.height(8.dp))
 
                 GlassmorphicTextField(
@@ -1409,8 +1465,6 @@ fun AddProductScreen(viewModel: ProductViewModel, onBack: () -> Unit, onSuccess:
                 }
                 
                 // Bahan Baku Selection (Slide Menu)
-                var showSelectionSheet by remember { mutableStateOf(false) }
-                
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         text = "Komposisi Produk",
@@ -1465,15 +1519,6 @@ fun AddProductScreen(viewModel: ProductViewModel, onBack: () -> Unit, onSuccess:
                         }
                     }
                 }
-
-                if (showSelectionSheet) {
-                    BahanBakuSlideMenu(
-                        bahanBakuList = bahanBakuList,
-                        selectedIds = selectedBahanBakuIds,
-                        onDismiss = { showSelectionSheet = false },
-                        onSelectionChanged = { selectedBahanBakuIds = it }
-                    )
-                }
                 
                 Spacer(modifier = Modifier.height(32.dp))
                 
@@ -1482,9 +1527,15 @@ fun AddProductScreen(viewModel: ProductViewModel, onBack: () -> Unit, onSuccess:
                         if (productName.isNotBlank()) {
                             // Duplicate check
                             val isDuplicate = products.any { 
-                                it.name.equals(productName.trim(), ignoreCase = true) && 
-                                it.category.equals(category.trim(), ignoreCase = true) &&
-                                it.type == productType
+                                val sameBasic = it.name.trim().equals(productName.trim(), ignoreCase = true) && 
+                                               it.category.trim().equals(category.trim(), ignoreCase = true) &&
+                                               it.type == productType
+                                
+                                if (productType == "Paket") {
+                                    sameBasic && it.packageName.trim().equals(packageName.trim(), ignoreCase = true)
+                                } else {
+                                    sameBasic
+                                }
                             }
                             
                             if (isDuplicate) {
@@ -1525,12 +1576,32 @@ fun AddProductScreen(viewModel: ProductViewModel, onBack: () -> Unit, onSuccess:
                 
                 Spacer(modifier = Modifier.height(32.dp))
             }
+
+            if (showSelectionSheet) {
+                BahanBakuSlideMenu(
+                    bahanBakuList = bahanBakuList,
+                    selectedIds = selectedBahanBakuIds,
+                    onDismiss = { showSelectionSheet = false },
+                    onSelectionChanged = { selectedBahanBakuIds = it }
+                )
+            }
         }
 
         if (showDuplicateAlert) {
             DuplicateAlertDialog(onDismiss = { showDuplicateAlert = false })
         }
+
+        if (showExitAlert) {
+            ExitConfirmationDialog(
+                onConfirm = { 
+                    showExitAlert = false
+                    onBack()
+                },
+                onDismiss = { showExitAlert = false }
+            )
+        }
     }
+}
 }
 
 @Composable
