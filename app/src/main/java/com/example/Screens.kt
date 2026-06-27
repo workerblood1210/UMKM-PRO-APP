@@ -115,13 +115,15 @@ fun DetailProductScreen(
                 }
             }
 
-            // Content
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp)
-            ) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+                // Content
+                Column(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .widthIn(max = 600.dp)
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 24.dp)
+                ) {
                 // Images
                 if (product.imageUris.isNotEmpty()) {
                     val images = product.imageUris.split(",")
@@ -222,6 +224,7 @@ fun DetailProductScreen(
                 }
                 Spacer(modifier = Modifier.height(32.dp))
             }
+            }
         }
     }
 }
@@ -280,13 +283,15 @@ fun KalkulasiScreen(
                 )
             }
 
-            // Content
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 24.dp)
-                    .verticalScroll(rememberScrollState())
-            ) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+                // Content
+                Column(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .widthIn(max = 600.dp)
+                        .padding(horizontal = 24.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
                 var grandTotal = 0.0
                 val bahanBakuList by viewModel.bahanBakuState.collectAsStateWithLifecycle()
 
@@ -352,6 +357,7 @@ fun KalkulasiScreen(
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
+            }
             }
         }
     }

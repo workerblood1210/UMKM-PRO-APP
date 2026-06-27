@@ -793,7 +793,8 @@ fun DashboardScreen(
 ) {
     val products by viewModel.uiState.collectAsStateWithLifecycle()
     
-    var kalkulasiCart by remember { mutableStateOf(setOf<com.example.data.Product>()) }
+    var kalkulasiCartIds by remember { mutableStateOf(setOf<Int>()) }
+    val kalkulasiCart = products.filter { it.id in kalkulasiCartIds }
     
     val infiniteTransition = rememberInfiniteTransition(label = "DashboardPulse")
     val cardAlpha by infiniteTransition.animateFloat(
@@ -886,79 +887,91 @@ fun DashboardScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState()),
+                    .weight(1f),
                 contentAlignment = Alignment.TopCenter
             ) {
                 if (products.isEmpty()) {
-                    GlassmorphicCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 64.dp)
-                            .graphicsLayer(alpha = cardAlpha)
-                            .testTag("empty_state_card")
-                    ) {
-                        Box(
+                    Box(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), contentAlignment = Alignment.TopCenter) {
+                        GlassmorphicCard(
                             modifier = Modifier
-                                .size(76.dp)
-                                .background(
-                                    Brush.verticalGradient(
-                                        listOf(Color(0x15FFFFFF), Color(0x0800F0FF))
-                                    ),
-                                    shape = RoundedCornerShape(24.dp)
-                                )
-                                .border(
-                                    1.dp, Color(0x26FFFFFF), RoundedCornerShape(24.dp)
-                                ),
-                            contentAlignment = Alignment.Center
+                                .fillMaxWidth()
+                                .padding(top = 64.dp)
+                                .graphicsLayer(alpha = cardAlpha)
+                                .testTag("empty_state_card")
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = "Empty State Icon",
-                                tint = Color(0xFF00F0FF),
-                                modifier = Modifier.size(32.dp)
-                            )
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(32.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(76.dp)
+                                        .background(
+                                            Brush.verticalGradient(
+                                                listOf(Color(0x15FFFFFF), Color(0x0800F0FF))
+                                            ),
+                                            shape = RoundedCornerShape(24.dp)
+                                        )
+                                        .border(
+                                            1.dp, Color(0x26FFFFFF), RoundedCornerShape(24.dp)
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Info,
+                                        contentDescription = "Empty State Icon",
+                                        tint = Color(0xFF00F0FF),
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(24.dp))
+
+                                Text(
+                                    text = "silahkan buat produk dulu",
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.White,
+                                    textAlign = TextAlign.Center,
+                                    letterSpacing = 0.5.sp
+                                )
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                Text(
+                                    text = "Aplikasi UMKM PRO siap dikonfigurasi. Hubungkan database atau tambahkan produk untuk memulai.",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Normal,
+                                    color = Color(0xCC94A3B8),
+                                    textAlign = TextAlign.Center,
+                                    lineHeight = 20.sp
+                                )
+                            }
                         }
-
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        Text(
-                            text = "silahkan buat produk dulu",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White,
-                            textAlign = TextAlign.Center,
-                            letterSpacing = 0.5.sp
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Text(
-                            text = "Aplikasi UMKM PRO siap dikonfigurasi. Hubungkan database atau tambahkan produk untuk memulai.",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Normal,
-                            color = Color(0xCC94A3B8),
-                            textAlign = TextAlign.Center,
-                            lineHeight = 20.sp
-                        )
                     }
                 } else {
-                    Column(
+                    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                        columns = androidx.compose.foundation.lazy.grid.GridCells.Adaptive(minSize = 300.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 16.dp, bottom = 120.dp),
+                            .padding(top = 16.dp),
+                        contentPadding = PaddingValues(bottom = 120.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        products.forEach { product ->
+                        items(products.size) { index ->
+                            val product = products[index]
                             ProductCard(
                                 product = product,
-                                isInCart = kalkulasiCart.contains(product),
+                                isInCart = kalkulasiCartIds.contains(product.id),
                                 onDetailClick = { onNavigateToDetail(product) },
                                 onKalkulasiToggle = { 
-                                    if (kalkulasiCart.contains(product)) {
-                                        kalkulasiCart = kalkulasiCart - product
+                                    if (kalkulasiCartIds.contains(product.id)) {
+                                        kalkulasiCartIds = kalkulasiCartIds - product.id
                                     } else {
-                                        kalkulasiCart = kalkulasiCart + product
+                                        kalkulasiCartIds = kalkulasiCartIds + product.id
                                     }
                                 }
                             )
@@ -974,8 +987,8 @@ fun DashboardScreen(
             enter = androidx.compose.animation.slideInVertically(initialOffsetY = { it }) + androidx.compose.animation.fadeIn(),
             exit = androidx.compose.animation.slideOutVertically(targetOffsetY = { it }) + androidx.compose.animation.fadeOut(),
             modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 32.dp)
+                .align(Alignment.BottomStart)
+                .padding(bottom = 32.dp, start = 24.dp)
                 .safeDrawingPadding()
         ) {
             ExtendedFloatingActionButton(
@@ -1436,11 +1449,12 @@ fun AddProductScreen(
                 )
             }
 
-            Box(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
                 // Form Content
                 Column(
                     modifier = Modifier
-                        .fillMaxSize()
+                        .fillMaxHeight()
+                        .widthIn(max = 600.dp)
                         .padding(horizontal = 24.dp)
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(20.dp)
@@ -1859,14 +1873,17 @@ fun BahanBakuDashboardScreen(viewModel: ProductViewModel, onBack: () -> Unit) {
                         Text("Belum ada bahan baku", color = Color(0xFF94A3B8))
                     }
                 } else {
-                    LazyColumn(
+                    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                        columns = androidx.compose.foundation.lazy.grid.GridCells.Adaptive(minSize = 300.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f),
                         contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(bahanBakuList) { bahanBaku ->
+                        items(bahanBakuList.size) { index ->
+                            val bahanBaku = bahanBakuList[index]
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
